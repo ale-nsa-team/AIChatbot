@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Assistant</title>
+  <link rel="icon" href="static/favicon_io/favicon.ico" type="image/x-icon">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #fff;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      flex-direction: column;
+    }
+    .chat-container {
+      width: 100%;
+      height: 80vh;
+      background-color: #fff;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      padding-top: 20px;
+      padding-bottom: 20px;
+      position: relative;
+    }
+    .chat-box {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 50px;
+      padding: 10px;
+      font-size: 16px;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .chat-box .message {
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 10px;
+      max-width: 80%;
+    }
+    .user-message {
+      background-color: #e9e9e9;
+      align-self: flex-end;
+      color: #000;
+      border-radius: 15px;
+    }
+    .ai-message {
+      align-self: flex-start;
+      color: #333;
+      border-radius: 12px;
+    }
+    .input-container {
+      display: flex;
+      align-items: flex-end;
+      position: absolute;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 70%;
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease;
+    }
+    .input-container textarea {
+      flex-grow: 1;
+      resize: none;
+      overflow: hidden;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      line-height: 1.4;
+      padding: 10px;
+      border-radius: 8px;
+      background-color: #f7f7f8;
+      min-height: 40px;
+      height: 30px;
+    }
+    .input-container button {
+      border-radius: 50%;
+      width: 45px;
+      height: 45px;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    input[type="text"] {
+      width: 80%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      font-size: 16px;
+    }
+    button {
+      width: 15%;
+      padding: 12px;
+      background-color: #007bff;
+      color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    #spinner-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 9999;
+      display: none;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div id="spinner-overlay">
+      <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+
+    <nav class="navbar" style="position:fixed; top:0; width:100%; background-color: #fff;">
+      <div class="container">
+        <a class="navbar-brand" href="#">
+          <img src="static/alelogo.png" alt="Bootstrap" width="120" height="40">
+        </a>
+      </div>
+    </nav>
+
+    <div class="row">
+      <div class="col-2"></div>
+      <div class="col-8" style="padding:20px">
+
+        <div class="chat-container">
+          <div id="intro-message" class="d-flex justify-content-center align-items-center flex-column w-100 h-100 text-center">
+            <div class="fs-2 fw-semibold text-secondary">
+              How can I help you today?
+            </div>
+          </div>
+          <div class="chat-box" id="chat-box"></div>
+        </div>
+      </div>
+      <div class="col-2"></div>
+    </div>
+
+    <div class="row" style="position: fixed; bottom: 0;width: 100%; margin-bottom: 50px;">
+      <div class="col-2"></div>
+      <div class="col-8">
+        <div class="input-container shadow-sm p-3 bg-white rounded"  id="input-container">
+          <textarea id="user-input" class="form-control border-0" rows="1" placeholder="Type your message..." 
+          oninput="autoResize(this);" 
+          onkeydown="if(event.key === 'Enter' && !event.shiftKey){event.preventDefault(); submitMessage();}">
+        </textarea>
+          <button class="btn btn-primary ms-2" onclick="submitMessage()">
+            &#10148;
+          </button>
+        </div>
+      </div>
+      <div class="col-2"></div>
+    </div>
+  </div>
+
+  <script>
+    // Move input container to the bottom when message is submitted
+    function moveToBottom() {
+      const inputContainer = document.getElementById('input-container');
+      inputContainer.style.position = 'fixed';
+      inputContainer.style.bottom = '30px';
+      inputContainer.style.transform = 'translateX(-50%)';
+    }
+
+    async function submitMessage() {
+      // Move input container to the bottom after message submission
+      moveToBottom();
+
+      const introMessage = document.getElementById('intro-message');
+      if (introMessage) {
+        introMessage.classList.add('d-none');
+      }
+      const userInput = document.getElementById('user-input').value;
+      if (!userInput.trim()) return;
+
+      const chatBox = document.getElementById('chat-box');
+      const formattedInput = userInput.replace(/\n/g, '<br>');
+      chatBox.innerHTML += `<div class="message user-message">${formattedInput}</div>`;
+      document.getElementById('user-input').value = '';
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      // Show spinner
+      document.getElementById('spinner-overlay').style.display = 'block';
+
+      try {
+        const response = await fetch('http://127.0.0.1:8000/process_input', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ user_input: userInput }),
+        });
+
+        const data = await response.json();
+
+        let aiResponse = "";
+        if (data.response) {
+          aiResponse = formatResponse(data.response.message);
+          aiResponse += formatResponse(data.response.answer);
+        } else {
+          aiResponse = "Sorry, no response from the AI.";
+        }
+
+        const aiMessageDiv = document.createElement('div');
+        aiMessageDiv.classList.add('message', 'ai-message');
+        chatBox.appendChild(aiMessageDiv);
+
+        // Hide spinner BEFORE typing
+        document.getElementById('spinner-overlay').style.display = 'none';
+
+        await typeResponseCharByChar(aiResponse, aiMessageDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+
+
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error communicating with server.');
+        document.getElementById('spinner-overlay').style.display = 'none';
+      }
+    }
+
+    function formatResponse(responseText) {
+      responseText = responseText.replace(/`([^`]+)`/g, '<code class="code">$1</code>');
+      responseText = responseText.replace(/^\d+\./gm, '<br><span class="numbered-list">$&</span>');
+      responseText = responseText.replace(/- /g, '<br><span class="bullet-list">&bull; </span>');
+      responseText = responseText.replace(/\n/g, '<br>');
+      return responseText;
+    }
+
+    async function typeResponseCharByChar(responseText, container) {
+      const delay = ms => new Promise(res => setTimeout(res, ms));
+      let i = 0;
+
+      while (i < responseText.length) {
+        if (responseText.substr(i, 4) === '<br>') {
+          container.innerHTML += '<br>';
+          i += 4;
+        } else if (responseText.substr(i, 6) === '&bull;') {
+          container.innerHTML += '&bull;';
+          i += 6;
+        } else if (responseText.substr(i, 6) === '<code ') {
+          const end = responseText.indexOf('</code>', i) + 7;
+          container.innerHTML += responseText.substring(i, end);
+          i = end;
+        } else if (responseText.substr(i, 6) === '<span ') {
+          const end = responseText.indexOf('</span>', i) + 7;
+          container.innerHTML += responseText.substring(i, end);
+          i = end;
+        } else {
+          container.innerHTML += responseText[i];
+          i++;
+        }
+        container.scrollIntoView({ behavior: "smooth", block: "end" });
+        await delay(20);
+      }
+    }
+
+    // function autoResize(textarea) {
+    //   // Reset height to auto to shrink and expand properly
+    //   textarea.style.height = 'auto';
+    //   textarea.style.height = (textarea.scrollHeight) + 'px';
+    // }
+
+    document.getElementById('user-input').value = '';
+  </script>
+</body>
+</html>

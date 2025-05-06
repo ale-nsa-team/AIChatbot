@@ -1,0 +1,8 @@
+config.py
+search_old.py
+test.py
+query.py
+processed_hashes.json
+requirements.txt
+faiss_index/
+__pycache__/
